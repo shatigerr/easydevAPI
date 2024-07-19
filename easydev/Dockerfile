@@ -9,8 +9,8 @@ EXPOSE 8081
 FROM mcr.microsoft.com/dotnet/sdk:8.0 AS build
 ARG BUILD_CONFIGURATION=Release
 WORKDIR /src
-COPY ["easydev/easydev.csproj", "easydev/"]
-RUN dotnet restore "./easydev/easydev.csproj"
+COPY ["./easydev.csproj", "easydev/"]
+RUN dotnet restore "./easydev.csproj"
 COPY . .
 WORKDIR "/src/easydev"
 RUN dotnet build "./easydev.csproj" -c $BUILD_CONFIGURATION -o /app/build
