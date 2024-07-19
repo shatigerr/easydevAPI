@@ -40,17 +40,26 @@ namespace easydev.Controllers
         [HttpGet("details/{id}")]
         public async Task<IActionResult>GetProjectById(long id)
         {
-            Project project = await _context.Projects
-                .Include(p => p.Endpoints)// Incluir los endpoints relacionados
-                .Include(p => p.IddatabaseNavigation)
-                .FirstAsync(p => p.Id == id);
-            if (project == null) 
+            try
             {
-                return BadRequest("NO PROJECT FOUND");
+
+                Project project =  _context.Projects
+                    .Include(p => p.Endpoints)// Incluir los endpoints relacionados
+                    .Include(p => p.IddatabaseNavigation)
+                    .First(p => p.Id == id);
+                if (project == null)
+                {
+                    return BadRequest("NO PROJECT FOUND");
+                }
+                else
+                {
+                    return Ok(project);
+                }
             }
-            else
+            catch (Exception ex) 
             {
-                return Ok(project);
+                Console.WriteLine(ex.ToString());
+                return BadRequest(ex.ToString());
             }
         }
     }

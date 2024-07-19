@@ -31,9 +31,16 @@ namespace easydev.Controllers
         [HttpPost]
         public async Task<IActionResult> CreateNewEndpoint([FromBody] Endpoint endpoint)
         {
-            _context.Endpoints.Add(endpoint);
-            await _context.SaveChangesAsync();
-            return Ok(endpoint);
+            try
+            {
+                _context.Endpoints.Add(endpoint);
+                await _context.SaveChangesAsync();
+                return Ok(endpoint);
+            }
+            catch (Exception ex) 
+            {
+                return BadRequest(ex.Message);
+            }
         }
 
         [HttpDelete("{id}")]
