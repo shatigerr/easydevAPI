@@ -1,0 +1,6 @@
+@easydev_HostAddress = http://localhost:5102
+
+GET {{easydev_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###
