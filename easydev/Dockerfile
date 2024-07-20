@@ -1,24 +1,29 @@
-#See https://aka.ms/customizecontainer to learn how to customize your debug container and how Visual Studio uses this Dockerfile to build your images for faster debugging.
-
+# Imagen base para el runtime
 FROM mcr.microsoft.com/dotnet/aspnet:8.0 AS base
-USER app
 WORKDIR /app
 EXPOSE 8080
 EXPOSE 8081
 
+# Imagen para la construcción
 FROM mcr.microsoft.com/dotnet/sdk:8.0 AS build
 ARG BUILD_CONFIGURATION=Release
 WORKDIR /src
-COPY ["./easydev.csproj", "easydev/"]
-RUN dotnet restore "easydev.csproj"
-COPY . .
-WORKDIR "/src/easydev"
-RUN dotnet build "./easydev.csproj" -c $BUILD_CONFIGURATION -o /app/build
 
+# Copiamos el archivo de proyecto y restauramos las dependencias
+COPY ["easydev.csproj", "."]
+RUN dotnet restore "./easydev.csproj"
+
+# Copiamos el resto de los archivos y construimos el proyecto
+COPY . .
+WORKDIR "/src"
+RUN dotnet build "easydev.csproj" -c $BUILD_CONFIGURATION -o /app/build
+
+# Publicamos el proyecto
 FROM build AS publish
 ARG BUILD_CONFIGURATION=Release
-RUN dotnet publish "./easydev.csproj" -c $BUILD_CONFIGURATION -o /app/publish /p:UseAppHost=false
+RUN dotnet publish "easydev.csproj" -c $BUILD_CONFIGURATION -o /app/publish /p:UseAppHost=false
 
+# Imagen final
 FROM base AS final
 WORKDIR /app
 COPY --from=publish /app/publish .
