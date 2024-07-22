@@ -80,7 +80,7 @@ namespace easydev.Controllers
                         await connection.OpenAsync();
                     }
                     
-                    if(request.Query.StartsWith("SELECT"))
+                    if(request.Query.ToUpper().StartsWith("SELECT"))
                     {
                         string query = request.GetQuery();
                         result = await request.GetRequest(connection);
