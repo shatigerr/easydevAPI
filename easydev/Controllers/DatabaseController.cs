@@ -17,15 +17,25 @@ namespace easydev.Controllers
         }
 
         [HttpPost]
-        public async Task<IActionResult> CreateNewEndpoint([FromBody] Database db)
+        public async Task<IActionResult> CreateNewDatabase([FromBody] Database db)
         {
-            _context.Databases.Add(db);
-            await _context.SaveChangesAsync();
-            return Ok(db);
+            string conn = db.GetConnectionString(db);
+            if(db.CheckDBConnection(db.Dbengine, conn))
+            {
+                _context.Databases.Add(db);
+                await _context.SaveChangesAsync();
+                return Ok(db);
+            }
+            else
+            {
+                return BadRequest("Unable to connect to the database");
+            }
+            
+            
         }
 
         [HttpDelete("{id}")]
-        public async Task<IActionResult> DeleteEndpoint(long id)
+        public async Task<IActionResult> DeleteDatabase(long id)
         {
             var db = await _context.Databases.FirstOrDefaultAsync(e => e.Id == id);
             if (db != null) _context.Databases.Remove(db);
