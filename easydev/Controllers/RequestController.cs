@@ -77,7 +77,18 @@ namespace easydev.Controllers
                 {
                     conn = request.postgreSqlConnection();
                     conn.Open();
-                    result = await request.PostgreGetRequest(conn);
+                    
+                    if (request.Query.ToUpper().StartsWith("SELECT"))
+                    {
+                        result = await request.PostgreGetRequest(conn);
+                        return Ok(result);
+                    }
+                    else
+                    {
+                        int affectedRows = request.PostgrePostRequest(conn);
+                        return Ok(affectedRows);
+                    }
+
                 }
                 else if(request.database.Dbengine == "MYSQL")
                 {
