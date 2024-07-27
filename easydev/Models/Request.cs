@@ -164,7 +164,8 @@ namespace easydev.Models
 
         public NpgsqlConnection postgreSqlConnection()
         {
-            NpgsqlConnection conn = new NpgsqlConnection(this.database.GetConnectionString(this.database));
+            string connString = this.database.GetConnectionString(this.database);
+            NpgsqlConnection conn = new NpgsqlConnection(connString);
             return conn;
         }
 

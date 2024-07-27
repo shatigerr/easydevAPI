@@ -73,10 +73,15 @@ namespace easydev.Controllers
                 List<Dictionary<string, object>> result;
                 dynamic conn;
                 //var connectionString = $"User Id={request.database.User};Password={request.database.Password};Server={request.database.Host};Port={request.database.Port};Database={request.database.Database1};Timeout=300;CommandTimeout=300;Pooling=false;";
-                if (request.database.Dbengine == "POSTGRESQL")
+                if (request.database.Dbengine.ToUpper() == "POSTGRESQL")
                 {
                     conn = request.postgreSqlConnection();
-                    conn.Open();
+                    try
+                    {
+                        conn.Open();
+                    }
+                    catch (Exception ex) { }
+                    
                     
                     if (request.Query.ToUpper().StartsWith("SELECT"))
                     {
@@ -90,7 +95,7 @@ namespace easydev.Controllers
                     }
 
                 }
-                else if(request.database.Dbengine == "MYSQL")
+                else if(request.database.Dbengine.ToUpper() == "MYSQL")
                 {
                     conn = request.mySqlConnection();
                     conn.Open();
