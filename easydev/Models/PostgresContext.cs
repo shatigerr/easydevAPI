@@ -15,6 +15,8 @@ public partial class PostgresContext : DbContext
     {
     }
 
+    public virtual DbSet<Article> Articles { get; set; }
+
     public virtual DbSet<AuditLogEntry> AuditLogEntries { get; set; }
 
     public virtual DbSet<Bucket> Buckets { get; set; }
@@ -30,6 +32,8 @@ public partial class PostgresContext : DbContext
     public virtual DbSet<Identity> Identities { get; set; }
 
     public virtual DbSet<Instance> Instances { get; set; }
+
+    public virtual DbSet<Log> Logs { get; set; }
 
     public virtual DbSet<Message> Messages { get; set; }
 
@@ -75,13 +79,11 @@ public partial class PostgresContext : DbContext
 
     protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
 #warning To protect potentially sensitive information in your connection string, you should move it out of source code. You can avoid scaffolding the connection string by using the Name= syntax to read it from configuration - see https://go.microsoft.com/fwlink/?linkid=2131148. For more guidance on storing connection strings, see https://go.microsoft.com/fwlink/?LinkId=723263.
-        => optionsBuilder.UseNpgsql("User Id=postgres.otkuubonfftnnpjfpiny;Password=1ltWFTGC3rbkB5WS;Server=aws-0-eu-central-1.pooler.supabase.com;Port=6543;Database=postgres;Timeout=300;CommandTimeout=300;Pooling=false;");
+        => optionsBuilder.UseNpgsql("User Id=postgres.otkuubonfftnnpjfpiny;Password=1ltWFTGC3rbkB5WS;Server=aws-0-eu-central-1.pooler.supabase.com;Port=6543;Database=postgres;");
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         modelBuilder
-            .HasPostgresEnum("DB", new[] { "Mysql", "SQL Server", "PostgreSQL" })
-            .HasPostgresEnum("HTTP METHOD", new[] { "GET", "POST", "DELETE", "PUT", "PATCH" })
             .HasPostgresEnum("auth", "aal_level", new[] { "aal1", "aal2", "aal3" })
             .HasPostgresEnum("auth", "code_challenge_method", new[] { "s256", "plain" })
             .HasPostgresEnum("auth", "factor_status", new[] { "unverified", "verified" })
@@ -98,6 +100,16 @@ public partial class PostgresContext : DbContext
             .HasPostgresExtension("graphql", "pg_graphql")
             .HasPostgresExtension("pgsodium", "pgsodium")
             .HasPostgresExtension("vault", "supabase_vault");
+
+        modelBuilder.Entity<Article>(entity =>
+        {
+            entity.HasKey(e => e.Id).HasName("article_pkey");
+
+            entity.ToTable("article");
+
+            entity.Property(e => e.Id).HasColumnName("id");
+            entity.Property(e => e.Title).HasColumnName("title");
+        });
 
         modelBuilder.Entity<AuditLogEntry>(entity =>
         {
@@ -201,6 +213,8 @@ public partial class PostgresContext : DbContext
 
             entity.ToTable("Endpoint");
 
+            entity.HasIndex(e => e.Url, "Endpoint_url_key").IsUnique();
+
             entity.Property(e => e.Id).HasColumnName("id");
             entity.Property(e => e.CreatedAt)
                 .HasDefaultValueSql("now()")
@@ -217,6 +231,7 @@ public partial class PostgresContext : DbContext
 
             entity.HasOne(d => d.IdProjectNavigation).WithMany(p => p.Endpoints)
                 .HasForeignKey(d => d.IdProject)
+                .OnDelete(DeleteBehavior.Cascade)
                 .HasConstraintName("Endpoint_idProject_fkey");
         });
 
@@ -294,6 +309,32 @@ public partial class PostgresContext : DbContext
             entity.Property(e => e.RawBaseConfig).HasColumnName("raw_base_config");
             entity.Property(e => e.UpdatedAt).HasColumnName("updated_at");
             entity.Property(e => e.Uuid).HasColumnName("uuid");
+        });
+
+        modelBuilder.Entity<Log>(entity =>
+        {
+            entity.HasKey(e => e.Id).HasName("Log_pkey");
+
+            entity.ToTable("Log");
+
+            entity.Property(e => e.Id).HasColumnName("id");
+            entity.Property(e => e.CreatedAt)
+                .HasDefaultValueSql("now()")
+                .HasColumnName("created_at");
+            entity.Property(e => e.IdProject).HasColumnName("idProject");
+            entity.Property(e => e.IdUser).HasColumnName("idUser");
+            entity.Property(e => e.Query).HasColumnName("query");
+            entity.Property(e => e.RequestDuration).HasColumnName("requestDuration");
+            entity.Property(e => e.Status).HasColumnName("status");
+            entity.Property(e => e.Type).HasColumnName("type");
+
+            entity.HasOne(d => d.IdProjectNavigation).WithMany(p => p.Logs)
+                .HasForeignKey(d => d.IdProject)
+                .HasConstraintName("Log_idProject_fkey");
+
+            entity.HasOne(d => d.IdUserNavigation).WithMany(p => p.Logs)
+                .HasForeignKey(d => d.IdUser)
+                .HasConstraintName("Log_idUser_fkey");
         });
 
         modelBuilder.Entity<Message>(entity =>

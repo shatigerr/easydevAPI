@@ -26,4 +26,6 @@ public partial class Project
     public virtual User? IdUserNavigation { get; set; }
 
     public virtual Database? IddatabaseNavigation { get; set; }
+
+    public virtual ICollection<Log> Logs { get; set; } = new List<Log>();
 }

@@ -15,5 +15,7 @@ public partial class User
 
     public string Password { get; set; } = null!;
 
+    public virtual ICollection<Log> Logs { get; set; } = new List<Log>();
+
     public virtual ICollection<Project> Projects { get; set; } = new List<Project>();
 }

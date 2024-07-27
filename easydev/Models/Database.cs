@@ -1,4 +1,5 @@
-﻿using Npgsql;
+﻿using MySql.Data.MySqlClient;
+using Npgsql;
 using System;
 using System.Collections.Generic;
 using System.Text.Json.Serialization;
@@ -26,16 +27,19 @@ public partial class Database
 
     public string GetConnectionString(Database db)
     {
-        string connectionString="";
+        string connectionString = "";
         if (db.Dbengine == "POSTGRESQL")
         {
             connectionString = $"User Id={db.User};Password={db.Password};Server={db.Host};Port={db.Port};Database={db.Database1};Timeout=300;CommandTimeout=300;Pooling=false;";
+        }else if(db.Dbengine == "MYSQL")
+        {
+            connectionString = $"server={db.Host};uid={db.User};pwd={db.Password};database={db.Database1}";
         }
 
         return connectionString;
     }
 
-    public bool CheckDBConnection(string dbEngine,string connString)
+    public bool CheckDBConnection(string dbEngine, string connString)
     {
         if (dbEngine == "POSTGRESQL")
         {
@@ -43,8 +47,32 @@ public partial class Database
         }
         else
         {
-            return false;
+            return checkMySqlConnection(connString);
         }
+    }
+
+    
+
+    private bool checkMySqlConnection(string connString)
+    {
+        bool connected = false;
+        try
+        {
+            using (var conn = new MySqlConnection(connString))
+            {
+                conn.Open();
+                if (conn.State == System.Data.ConnectionState.Open)
+                {
+                    connected = true;
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            connected = false;
+        }
+
+        return connected;
     }
 
     private bool checkPostgreSQLConnection(string connString)
@@ -61,11 +89,11 @@ public partial class Database
                 }
             }
         }
-        catch (Exception ex) 
+        catch (Exception ex)
         {
             connected = false;
         }
-        
+
 
         return connected;
     }

@@ -2,7 +2,9 @@
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using MySql.Data.MySqlClient;
 using Npgsql;
+using static Microsoft.EntityFrameworkCore.DbLoggerCategory.Database;
 
 namespace easydev.Controllers
 {
@@ -69,27 +71,27 @@ namespace easydev.Controllers
             {
 
                 List<Dictionary<string, object>> result;
-                var connectionString = $"User Id={request.database.User};Password={request.database.Password};Server={request.database.Host};Port={request.database.Port};Database={request.database.Database1};Timeout=300;CommandTimeout=300;Pooling=false;";
-
-                var optionsBuilder = new DbContextOptionsBuilder();
-                optionsBuilder.UseNpgsql(connectionString);
-                using (var connection = new NpgsqlConnection(connectionString))
+                dynamic conn;
+                //var connectionString = $"User Id={request.database.User};Password={request.database.Password};Server={request.database.Host};Port={request.database.Port};Database={request.database.Database1};Timeout=300;CommandTimeout=300;Pooling=false;";
+                if (request.database.Dbengine == "POSTGRESQL")
                 {
-                    if (connection.State != System.Data.ConnectionState.Open)
-                    {
-                        await connection.OpenAsync();
-                    }
+                    conn = request.postgreSqlConnection();
+                    conn.Open();
+                    result = await request.PostgreGetRequest(conn);
+                }
+                else if(request.database.Dbengine == "MYSQL")
+                {
+                    conn = request.mySqlConnection();
+                    conn.Open();
                     
-                    if(request.Query.ToUpper().StartsWith("SELECT"))
+                    if (request.Query.ToUpper().StartsWith("SELECT"))
                     {
-                        string query = request.GetQuery();
-                        result = await request.GetRequest(connection);
-
+                        result = await request.MysqlGetRequest(conn);
                         return Ok(result);
                     }
                     else
                     {
-                        int affectedRows = request.PostRequest(connection);
+                        int affectedRows = request.MysqlPostRequest(conn);
                         return Ok(affectedRows);
                     }
                 }
