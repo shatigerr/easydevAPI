@@ -21,6 +21,7 @@ public partial class Log
 
     public double? RequestDuration { get; set; }
 
+
     public virtual Project? IdProjectNavigation { get; set; }
 
     public virtual User? IdUserNavigation { get; set; }
