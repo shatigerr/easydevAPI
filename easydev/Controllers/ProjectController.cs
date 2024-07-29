@@ -46,6 +46,7 @@ namespace easydev.Controllers
                 Project project =  _context.Projects
                     .Include(p => p.Endpoints)// Incluir los endpoints relacionados
                     .Include(p => p.IddatabaseNavigation)
+                    .Include(p => p.Logs)
                     .First(p => p.Id == id);
                 if (project == null)
                 {
