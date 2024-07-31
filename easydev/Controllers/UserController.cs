@@ -4,6 +4,8 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using System.Threading.Tasks;
 using System.Net.Mail;
+using System.Net;
+using Microsoft.AspNetCore.Http.HttpResults;
 
 namespace easydev.Controllers
 {
@@ -48,10 +50,32 @@ namespace easydev.Controllers
         [HttpPost("create")]
         public async Task<IActionResult> CreateNewUser([FromBody] User user)
         {
-            _postgresContext.Users.Add(user);
-            await _postgresContext.SaveChangesAsync();
             
-            return Ok();
+            string recipientEmail = user.Mail;
+            string subject = "Verify Your Account";
+            string body = "activate your account";
+
+            SmtpClient smtpClient = new SmtpClient("smtp.gmail.com")
+            {
+                Port = 587,
+                Credentials = new NetworkCredential(Environment.GetEnvironmentVariable("SENDER_MAIL"), Environment.GetEnvironmentVariable("SENDER_PASSWORD")),
+                EnableSsl= true,
+                Timeout=10000
+            };
+            MailMessage mailMessage = new MailMessage(Environment.GetEnvironmentVariable("SENDER_MAIL"),recipientEmail,subject,body);
+            try
+            {
+                await smtpClient.SendMailAsync(mailMessage);
+                _postgresContext.Users.Add(user);
+                await _postgresContext.SaveChangesAsync();
+            }
+            catch (Exception ex) 
+            {
+                return BadRequest("Failed to create user" + ex);
+            }
+            
+
+            return Ok("User created successfully");
         }
     }
 }
