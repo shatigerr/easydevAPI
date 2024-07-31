@@ -2,7 +2,8 @@
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
-using System.Threading.Tasks; 
+using System.Threading.Tasks;
+using System.Net.Mail;
 
 namespace easydev.Controllers
 {
@@ -49,6 +50,7 @@ namespace easydev.Controllers
         {
             _postgresContext.Users.Add(user);
             await _postgresContext.SaveChangesAsync();
+            
             return Ok();
         }
     }
