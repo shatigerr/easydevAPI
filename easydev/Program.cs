@@ -19,8 +19,22 @@ builder.Services.AddSwaggerGen();
 DotNetEnv.Env.Load();
 
 builder.Services.AddDbContext<PostgresContext>(options =>
-    options.UseNpgsql(Environment.GetEnvironmentVariable("CONN")));
-
+{
+    options.UseNpgsql(Environment.GetEnvironmentVariable("CONN"), npgsqlOptions =>
+    {
+        npgsqlOptions.EnableRetryOnFailure(
+            maxRetryCount: 1, // Número máximo de reintentos
+            maxRetryDelay: TimeSpan.FromSeconds(2), // Retraso máximo entre reintentos
+            errorCodesToAdd: new[]
+            {
+                "40001", // Serialization failure
+                "40P01"  // Deadlock detected
+            }); // Puedes especificar códigos de error adicionales para los que se debería reintentar
+        
+    });
+});
+    
+    
 builder.Services.AddCors(options =>
 {
     options.AddPolicy("angularApp", policy =>

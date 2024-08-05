@@ -31,7 +31,8 @@ public partial class Database
         if (db.Dbengine.ToUpper() == "POSTGRESQL")
         {
             connectionString = $"User Id={db.User};Password={db.Password};Server={db.Host};Port={db.Port};Database={db.Database1};Timeout=300;CommandTimeout=300;Pooling=false;";
-        }else if(db.Dbengine.ToUpper() == "MYSQL")
+        }
+        else if (db.Dbengine.ToUpper() == "MYSQL")
         {
             connectionString = $"server={db.Host};uid={db.User};pwd={db.Password};database={db.Database1}";
         }
@@ -51,7 +52,7 @@ public partial class Database
         }
     }
 
-    
+
 
     private bool checkMySqlConnection(string connString)
     {

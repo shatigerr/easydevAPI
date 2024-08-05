@@ -33,16 +33,29 @@ namespace easydev.Controllers
             var user = await _postgresContext.Users.FirstOrDefaultAsync(user => user.Mail.Equals(loginRequest.Email));
             if (user == null) 
             {
-                return BadRequest($"User with {loginRequest.Email} NOT FOUND");
+                string text = string.IsNullOrEmpty(loginRequest.Email) ? "User NOT FOUND" : $"User with {loginRequest.Email} NOT FOUND";
+                return BadRequest(new {message = text,noti = "2"});
             }
             else
             {
                 if(loginRequest.Password.Equals(user.Password))
                 {
-                    return Ok(user);
+                    if(user.Activated == 1)
+                    {
+                        return Ok(user);
+                    }
+                    else
+                    {
+                        return BadRequest(new { message = "Account not activated",noti = "2" });
+                    }
+                }
+                else
+                {
+                    return BadRequest(new { message = "Invalid password",noti = "2" });
                 }
 
-                return BadRequest("Incorrect password");
+                
+                
             }
   
         }
@@ -50,10 +63,26 @@ namespace easydev.Controllers
         [HttpPost("create")]
         public async Task<IActionResult> CreateNewUser([FromBody] User user)
         {
-            
+            if (string.IsNullOrEmpty(user.Mail))
+            {
+                return BadRequest();
+            }
             string recipientEmail = user.Mail;
             string subject = "Verify Your Account";
-            string body = "activate your account";
+            string body = @$"
+            <html>
+            <body style='font-family: Arial, sans-serif;'>
+                <div style='max-width: 600px; margin: auto; padding: 20px; border: 1px solid #dddddd; border-radius: 5px;'>
+                    <h1 style='color: #4CAF50; text-align: center;'>Activate Your Account</h1>
+                    <p style='font-size: 18px;'>Hello, {user.Mail}</p>
+                    <p style='font-size: 16px;'>Thank you for registering with us. Please click the button below to activate your account!</p>
+                    <div style='text-align: center; margin: 20px 0;'>
+                        <a href='http://localhost:4200/account?mail={user.Mail}' style='display: inline-block; padding: 10px 20px; font-size: 16px; color: #ffffff; background-color: #4338ca; text-decoration: none; border-radius: 5px;'>Activate Account</a>
+                    </div>
+                    <p style='font-size: 16px;'>Best regards,<br>easydev</p>
+                </div>
+            </body>
+            </html>";
 
             SmtpClient smtpClient = new SmtpClient("smtp.gmail.com")
             {
@@ -62,7 +91,10 @@ namespace easydev.Controllers
                 EnableSsl= true,
                 Timeout=10000
             };
-            MailMessage mailMessage = new MailMessage(Environment.GetEnvironmentVariable("SENDER_MAIL"),recipientEmail,subject,body);
+            MailMessage mailMessage = new MailMessage(Environment.GetEnvironmentVariable("SENDER_MAIL"), recipientEmail, subject, body)
+            {
+                IsBodyHtml=true
+            };
             try
             {
                 await smtpClient.SendMailAsync(mailMessage);
@@ -71,11 +103,47 @@ namespace easydev.Controllers
             }
             catch (Exception ex) 
             {
-                return BadRequest("Failed to create user" + ex);
+                return BadRequest(new {message = "Failed creation of user. try Again!", noti = "2"});
             }
             
 
-            return Ok("User created successfully");
+            return Ok(new { message = "User created successfully!!", noti = "1" });
+        }
+
+        [HttpPut]
+        public async Task<IActionResult> ActivateAccount([FromQuery] string mail)
+        {
+            if (string.IsNullOrEmpty(mail))
+            {
+                return BadRequest("Email cannot be null or empty");
+            }
+
+           User user = await _postgresContext.Users.FirstOrDefaultAsync(u => u.Mail.Equals(mail));
+           if (user == null)
+            {
+                return NotFound("User not found");
+            }
+            if (user.Activated == 1)
+            {
+                return BadRequest("User account is already activated");
+            }
+
+            try
+            {
+
+                user.Activated = 1;
+                //_postgresContext.Users.Update(user);
+                await _postgresContext.SaveChangesAsync();
+                return Ok();
+            }
+            catch (Exception ex)
+            {
+                // Log the exception message
+                Console.WriteLine($"An error occurred while activating the account: {ex.Message}");
+
+                // Return the exception message for debugging purposes (optional)
+                return BadRequest($"An error occurred: {ex.InnerException?.Message ?? ex.Message}");
+            }
         }
     }
 }
