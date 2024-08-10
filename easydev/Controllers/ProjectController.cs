@@ -18,7 +18,7 @@ namespace easydev.Controllers
         [HttpGet("{id}")]
         public async Task<IActionResult> GetProjectByUser(long id)
         {
-            List<Project> projects = await _context.Projects.Where(p => p.IdUser == id).ToListAsync();
+            List<Project> projects = await _context.Projects.AsNoTracking().Where(p => p.IdUser == id).ToListAsync();
 
             return Ok(projects);
         }
@@ -43,11 +43,12 @@ namespace easydev.Controllers
             try
             {
 
-                Project project =  _context.Projects
-                    .Include(p => p.Endpoints)// Incluir los endpoints relacionados
-                    .Include(p => p.IddatabaseNavigation)
-                    .Include(p => p.Logs)
-                    .First(p => p.Id == id);
+                Project project = await _context.Projects
+                .AsNoTracking()
+                .Include(p => p.Endpoints) // Incluir los endpoints relacionados
+                .Include(p => p.IddatabaseNavigation)
+                .Include(p => p.Logs)
+                .FirstAsync(p => p.Id == id);
                 if (project == null)
                 {
                     return BadRequest("NO PROJECT FOUND");
