@@ -1,4 +1,5 @@
 ﻿using easydev.Models;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -10,6 +11,7 @@ namespace easydev.Controllers
 {
     [Route("api/[controller]")]
     [ApiController]
+    [Authorize]
     public class RequestController : ControllerBase
     {
         private readonly PostgresContext _context;
@@ -91,7 +93,7 @@ namespace easydev.Controllers
                     else
                     {
                         int affectedRows = request.PostgrePostRequest(conn);
-                        return Ok(affectedRows);
+                        return Ok( new { affectedRows });
                     }
 
                 }
@@ -108,7 +110,7 @@ namespace easydev.Controllers
                     else
                     {
                         int affectedRows = request.MysqlPostRequest(conn);
-                        return Ok(affectedRows);
+                        return Ok(new { affectedRows });
                     }
                 }
             }

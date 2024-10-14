@@ -51,7 +51,7 @@ namespace easydev.Models
                 }
             }
 
-            this.Query = string.Join(" ", queryArr);
+             this.Query = string.Join(" ", queryArr);
             using (var command = new NpgsqlCommand(this.Query, connection))
             {
                 command.CommandTimeout = 120;

@@ -1,4 +1,5 @@
 ﻿using easydev.Models;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -8,6 +9,7 @@ namespace easydev.Controllers
 {
     [Route("api/[controller]")]
     [ApiController]
+    [Authorize]
 
     public class EndpointController : ControllerBase
     {
@@ -38,6 +40,38 @@ namespace easydev.Controllers
                 return Ok(endpoint);
             }
             catch (Exception ex) 
+            {
+                return BadRequest(ex.Message);
+            }
+        }
+
+        [HttpPut("{id}")]
+        public async Task<IActionResult> UpdateEndpoint([FromBody] Endpoint updatedEndpoint ,long id)
+        {
+            try
+            {
+
+                Endpoint endpoint = await _context.Endpoints.Where(e => e.Id == id).FirstAsync();
+
+                if (endpoint == null)
+                {
+                    return NotFound("Endpoint not found");
+                }
+
+                // Actualizar las propiedades del endpoint existente con los valores del updatedEndpoint
+                endpoint.Url = updatedEndpoint.Url;
+                endpoint.Query = updatedEndpoint.Query;
+                endpoint.HttpMethod = updatedEndpoint.HttpMethod;
+                endpoint.IdProject = updatedEndpoint.IdProject;
+                endpoint.Params = updatedEndpoint.Params;
+                endpoint.Id = id;
+                // Copiar otras propiedades necesarias...
+
+                // Guardar los cambios en la base de datos
+                await _context.SaveChangesAsync();
+                return Ok(endpoint);
+            }
+            catch (Exception ex)
             {
                 return BadRequest(ex.Message);
             }

@@ -6,11 +6,13 @@ using System.Threading.Tasks;
 using System.Net.Mail;
 using System.Net;
 using Microsoft.AspNetCore.Http.HttpResults;
+using Microsoft.AspNetCore.Authorization;
 
 namespace easydev.Controllers
 {
     [Route("api/[controller]")]
     [ApiController]
+    [Authorize]
     public class UserController : ControllerBase
     {
         private readonly PostgresContext _postgresContext;

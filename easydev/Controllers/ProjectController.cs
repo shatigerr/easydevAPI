@@ -1,4 +1,5 @@
 ﻿using easydev.Models;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -7,6 +8,7 @@ namespace easydev.Controllers
 {
     [Route("api/[controller]")]
     [ApiController]
+    [Authorize]
     public class ProjectController : ControllerBase
     {
         private PostgresContext _context;
@@ -18,9 +20,15 @@ namespace easydev.Controllers
         [HttpGet("{id}")]
         public async Task<IActionResult> GetProjectByUser(long id)
         {
-            List<Project> projects = await _context.Projects.AsNoTracking().Where(p => p.IdUser == id).ToListAsync();
+            try
+            {
+                List<Project> projects = await _context.Projects.AsNoTracking().Where(p => p.IdUser == id).ToListAsync();
+                return Ok(projects);
 
-            return Ok(projects);
+            }
+            catch (Exception ex) {
+                return BadRequest();
+            }
         }
 
         [HttpPost]
@@ -34,6 +42,22 @@ namespace easydev.Controllers
             }
 
             return BadRequest("ERROR A PROJECT NEEDS A DATABASE");
+
+        }
+
+        [HttpDelete("{id}")]
+        public async Task<IActionResult> deleteProject(long id)
+        {
+            try
+            {
+                Project p = await _context.Projects.Where(p => p.Id == id).FirstAsync();
+                _context.Remove(p);
+                await _context.SaveChangesAsync();
+                return Ok();
+            }
+            catch (Exception ex) {
+                return BadRequest();
+            }
 
         }
 
@@ -59,6 +83,34 @@ namespace easydev.Controllers
                 }
             }
             catch (Exception ex) 
+            {
+                Console.WriteLine(ex.ToString());
+                return BadRequest(ex.ToString());
+            }
+        }
+
+        [HttpPut("{id}")]
+        public async Task<IActionResult> UpdateProject(long id, [FromBody] Project project)
+        {
+            try
+            {
+
+                Project p = await _context.Projects.Where(p => p.Id == id).FirstAsync();
+                
+                if (project == null || p == null)
+                {
+                    return BadRequest();
+                }
+                
+                p.Id = id;
+                p.Title = project.Title;
+                p.Description = project.Description;
+                p.Key = project.Key;
+                
+                await _context.SaveChangesAsync();
+                return Ok(p);
+            }
+            catch (Exception ex)
             {
                 Console.WriteLine(ex.ToString());
                 return BadRequest(ex.ToString());
