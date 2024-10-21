@@ -59,7 +59,7 @@ namespace easydev.Models
                 try
                 {
                     var affectedRows = command.ExecuteNonQuery();
-                    return 1;
+                    return affectedRows;
                 }
                 catch (Exception ex)
                 {

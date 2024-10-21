@@ -86,7 +86,7 @@ namespace easydev.Controllers
             </body>
             </html>";
 
-            SmtpClient smtpClient = new SmtpClient("smtp.gmail.com")
+            SmtpClient smtpClient = new SmtpClient("smtp.ionos.es")
             {
                 Port = 587,
                 Credentials = new NetworkCredential(Environment.GetEnvironmentVariable("SENDER_MAIL"), Environment.GetEnvironmentVariable("SENDER_PASSWORD")),

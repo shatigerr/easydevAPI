@@ -54,9 +54,10 @@ var app = builder.Build();
 //    app.UseSwagger();
 //    app.UseSwaggerUI();
 //}
+app.UseCors("angularApp");
+
 
 app.UseHttpsRedirection();
-app.UseCors("angularApp");
 app.UseAuthentication();
 app.UseAuthorization();
 
