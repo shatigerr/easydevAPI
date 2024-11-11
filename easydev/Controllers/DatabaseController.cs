@@ -30,22 +30,19 @@ namespace easydev.Controllers
         public async Task<IActionResult> CreateNewDatabase([FromBody] Database db)
         {
             string conn = db.GetConnectionString(db);
-            if(db.CheckDBConnection(db.Dbengine, conn))
+            //if(db.CheckDBConnection(db.Dbengine, conn))
+            
+            try
             {
-                try
-                {
-                    _context.Databases.Add(db);
-                    await _context.SaveChangesAsync();
-                    return Ok(db);
-                }
-                catch (Exception ex) {
-                    return BadRequest("Error");
-                }
+                _context.Databases.Add(db);
+                await _context.SaveChangesAsync();
+                return Ok(db);
             }
-            else
-            {
-                return BadRequest("Unable to connect to the database");
+            catch (Exception ex) {
+                return BadRequest("Error");
             }
+            
+            
             
             
         }
