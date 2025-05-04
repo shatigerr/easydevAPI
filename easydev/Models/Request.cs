@@ -7,7 +7,8 @@ namespace easydev.Models
 {
     public partial class Request
     {
-        public Database database { get; set; }
+        public Database database;
+        public long idProject { get; set; }
         public string Query { get; set; }
 
         public string? Params { get; set; }
@@ -26,6 +27,7 @@ namespace easydev.Models
                     if (queryArr[i] == "?")
                     {
                         queryArr[i] = paramsArr[num];
+                        num++;
                     }
                 }
 

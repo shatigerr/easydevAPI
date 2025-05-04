@@ -36,7 +36,7 @@ namespace easydev.Controllers
             if (user == null) 
             {
                 string text = string.IsNullOrEmpty(loginRequest.Email) ? "User NOT FOUND" : $"User with {loginRequest.Email} NOT FOUND";
-                return BadRequest(new {message = text,noti = "2"});
+                return BadRequest(new {message = text,type = "error"});
             }
             else
             {
@@ -48,12 +48,12 @@ namespace easydev.Controllers
                     }
                     else
                     {
-                        return BadRequest(new { message = "Account not activated",noti = "2" });
+                        return BadRequest(new { message = "Account not activated",type = "error" });
                     }
                 }
                 else
                 {
-                    return BadRequest(new { message = "Invalid password",noti = "2" });
+                    return BadRequest(new { message = "Invalid password",type = "error" });
                 }
 
                 

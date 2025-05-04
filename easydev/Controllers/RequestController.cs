@@ -1,4 +1,5 @@
-﻿using easydev.Models;
+﻿using easydev.Interfaces;
+using easydev.Models;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
@@ -23,7 +24,18 @@ namespace easydev.Controllers
         [HttpGet]
         public async Task<IActionResult> GetRequest([FromBody] Request request)
         {
-
+            Project proj = _context.Projects.Where(x => x.Id == request.idProject).First();
+            request.database = _context.Databases.Where(x => x.Id == proj.Iddatabase).First();
+            DatabaseFactory dbFactory = new DatabaseFactory();
+            IDatabaseFactory db = dbFactory.CreateFactory(request.database);
+            if (db.CheckDBConnection(request.database))
+            {
+                var result = db.Get(request.database, request.GetQuery());
+                return Ok(result);
+            }
+            
+            return BadRequest();
+            
             if (request != null)
             {
                 var connectionString = $"User Id={request.database.User};Password={request.database.Password};Server={request.database.Host};Port={request.database.Port};Database={request.database.Database1};";
@@ -67,52 +79,32 @@ namespace easydev.Controllers
         [HttpPost]
         public async Task<IActionResult> PostRequest([FromBody] Request request)
         {
-            //User Id=postgres.otkuubonfftnnpjfpiny;Password=1ltWFTGC3rbkB5WS;Server=aws-0-eu-central-1.pooler.supabase.com;Port=6543;Database=postgres;
 
             if (request != null)
             {
-
-                List<Dictionary<string, object>> result;
-                dynamic conn;
-                //var connectionString = $"User Id={request.database.User};Password={request.database.Password};Server={request.database.Host};Port={request.database.Port};Database={request.database.Database1};Timeout=300;CommandTimeout=300;Pooling=false;";
-                if (request.database.Dbengine.ToUpper() == "POSTGRESQL")
+                Project proj = _context.Projects.Where(x => x.Id == request.idProject).First();
+                request.database = _context.Databases.Where(x => x.Id == proj.Iddatabase).First();
+                
+                DatabaseFactory dbFactory = new DatabaseFactory();
+                IDatabaseFactory db = dbFactory.CreateFactory(request.database);
+                string formatedQuery = request.GetQuery();
+                if (db.CheckDBConnection(request.database))
                 {
-                    conn = request.postgreSqlConnection();
-                    try
+                    if (formatedQuery.StartsWith("SELECT"))
                     {
-                        conn.Open();
-                    }
-                    catch (Exception ex) { }
-                    
-                    
-                    if (request.Query.ToUpper().StartsWith("SELECT"))
-                    {
-                        result = await request.PostgreGetRequest(conn);
-                        return Ok(result);
+                        var resultado = db.Get(request.database, formatedQuery);
+                        return Ok(resultado.Result);
                     }
                     else
                     {
-                        int affectedRows = request.PostgrePostRequest(conn);
-                        return Ok( new { affectedRows });
-                    }
-
-                }
-                else if(request.database.Dbengine.ToUpper() == "MYSQL")
-                {
-                    conn = request.mySqlConnection();
-                    conn.Open();
-                    
-                    if (request.Query.ToUpper().StartsWith("SELECT"))
-                    {
-                        result = await request.MysqlGetRequest(conn);
-                        return Ok(result);
-                    }
-                    else
-                    {
-                        int affectedRows = request.MysqlPostRequest(conn);
-                        return Ok(new { affectedRows });
+                        var resultado = db.Post(request.database, formatedQuery);
+                        return Ok(new { resultado });
                     }
                 }
+            
+                return BadRequest();
+                
+                
             }
             return BadRequest();
         }
