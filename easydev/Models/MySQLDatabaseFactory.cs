@@ -1,3 +1,4 @@
+using System.Data;
 using easydev.Interfaces;
 using MySql.Data.MySqlClient;
 
@@ -80,5 +81,15 @@ public class MySQLDatabaseFactory : IDatabaseFactory
 
 
         }
+    }
+
+    public DataTable GetDBTables(Database db)
+    {
+        throw new NotImplementedException();
+    }
+
+    public DataTable GetDBColumns(Database db, string table)
+    {
+        throw new NotImplementedException();
     }
 }

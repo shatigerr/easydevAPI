@@ -1,3 +1,4 @@
+using System.Data;
 using easydev.Interfaces;
 using Microsoft.Data.SqlClient;
 
@@ -81,5 +82,15 @@ public class SQLServerDatabaseFactory : IDatabaseFactory
 
                 
         }
+    }
+
+    public DataTable GetDBTables(Database db)
+    {
+        throw new NotImplementedException();
+    }
+
+    public DataTable GetDBColumns(Database db, string table)
+    {
+        throw new NotImplementedException();
     }
 }

@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.ComponentModel.DataAnnotations.Schema;
 using System.Text.Json.Serialization;
 
 namespace easydev.Models;
@@ -13,8 +14,9 @@ public partial class User
 
     public string Mail { get; set; } = null!;
 
-    public string Password { get; set; } = null!;
-
+    public string Password { get; set; } = null;
+    [NotMapped]
+    public string Password2 { get; set; }
     public short? Activated { get; set; }
 
     public virtual ICollection<Log> Logs { get; set; } = new List<Log>();

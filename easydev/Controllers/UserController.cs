@@ -36,7 +36,7 @@ namespace easydev.Controllers
             if (user == null) 
             {
                 string text = string.IsNullOrEmpty(loginRequest.Email) ? "User NOT FOUND" : $"User with {loginRequest.Email} NOT FOUND";
-                return BadRequest(new {message = text,type = "error"});
+                return BadRequest(new { msg = text,type = "error"});
             }
             else
             {
@@ -48,12 +48,12 @@ namespace easydev.Controllers
                     }
                     else
                     {
-                        return BadRequest(new { message = "Account not activated",type = "error" });
+                        return BadRequest(new { msg = "Account not activated",type = "error" });
                     }
                 }
                 else
                 {
-                    return BadRequest(new { message = "Invalid password",type = "error" });
+                    return BadRequest(new { msg = "Incorrect password",type = "error" });
                 }
 
                 
@@ -65,23 +65,39 @@ namespace easydev.Controllers
         [HttpPost("create")]
         public async Task<IActionResult> CreateNewUser([FromBody] User user)
         {
+            if(user.Password != user.Password2) return BadRequest(new { msg = "The passwords do not match. Please check again.", type = "error" });
             if (string.IsNullOrEmpty(user.Mail))
             {
-                return BadRequest();
+                return BadRequest(new { msg = "You haven't entered any email.", type = "error" }); 
             }
             string recipientEmail = user.Mail;
             string subject = "Verify Your Account";
             string body = @$"
             <html>
-            <body style='font-family: Arial, sans-serif;'>
-                <div style='max-width: 600px; margin: auto; padding: 20px; border: 1px solid #dddddd; border-radius: 5px;'>
-                    <h1 style='color: #4CAF50; text-align: center;'>Activate Your Account</h1>
-                    <p style='font-size: 18px;'>Hello, {user.Mail}</p>
-                    <p style='font-size: 16px;'>Thank you for registering with us. Please click the button below to activate your account!</p>
-                    <div style='text-align: center; margin: 20px 0;'>
-                        <a href='http://localhost:4200/account?mail={user.Mail}' style='display: inline-block; padding: 10px 20px; font-size: 16px; color: #ffffff; background-color: #4338ca; text-decoration: none; border-radius: 5px;'>Activate Account</a>
+            <body style='font-family: Inter, Arial, sans-serif; background-color: #f9fafb; padding: 40px 0;'>
+                <div style='max-width: 600px; margin: auto; background-color: #ffffff; padding: 30px; border-radius: 12px; border: 1px solid #e5e7eb; box-shadow: 0 2px 8px rgba(0,0,0,0.04);'>
+                    <h1 style='color: #111827; font-size: 28px; text-align: center; margin-bottom: 24px;'>Activate Your Account</h1>
+
+                    <p style='font-size: 16px; color: #4b5563; margin-bottom: 20px;'>Hello, <b>{user.Mail}</b></p>
+
+                    <p style='font-size: 16px; color: #4b5563; margin-bottom: 30px;'>
+                        Thank you for joining <strong>easydev</strong>. To start using your account, please activate it by clicking the button below.
+                    </p>
+
+                    <div style='text-align: center; margin-bottom: 40px;'>
+                        <a href='http://localhost:4200/account?mail={user.Mail}'
+                            style='display: inline-block; padding: 12px 28px; background-color: #111827; color: #ffffff; font-size: 16px; text-decoration: none; border-radius: 6px;'>
+                            Activate Account
+                        </a>
                     </div>
-                    <p style='font-size: 16px;'>Best regards,<br>easydev</p>
+
+                    <p style='font-size: 14px; color: #9ca3af; text-align: center;'>
+                        If you didn't create this account, please ignore this email.
+                    </p>
+
+                    <p style='font-size: 14px; color: #9ca3af; text-align: center; margin-top: 24px;'>
+                        — The easydev Team
+                    </p>
                 </div>
             </body>
             </html>";
@@ -105,11 +121,11 @@ namespace easydev.Controllers
             }
             catch (Exception ex) 
             {
-                return BadRequest(new {message = "Failed creation of user. try Again!", noti = "2"});
+                return BadRequest(new { msg = "Failed creation of user. try Again!", type = "error" });
             }
             
 
-            return Ok(new { message = "User created successfully!!", noti = "1" });
+            return Ok(new { msg="User created succesfully!", type="succesfull"});
         }
 
         [HttpPut]
@@ -117,26 +133,28 @@ namespace easydev.Controllers
         {
             if (string.IsNullOrEmpty(mail))
             {
-                return BadRequest("Email cannot be null or empty");
+                
+                return BadRequest(new { msg = "Email cannot be null or empty", type = "error" });
             }
 
            User user = await _postgresContext.Users.FirstOrDefaultAsync(u => u.Mail.Equals(mail));
            if (user == null)
             {
-                return NotFound("User not found");
+                
+                return NotFound(new { msg = "User not found", type = "error" });
             }
             if (user.Activated == 1)
             {
-                return BadRequest("User account is already activated");
+                
+                return BadRequest(new { msg = "User account is already activated", type = "error" });
             }
 
             try
             {
 
                 user.Activated = 1;
-                //_postgresContext.Users.Update(user);
                 await _postgresContext.SaveChangesAsync();
-                return Ok();
+                return Ok(new { msg = "OK", type = "success" });
             }
             catch (Exception ex)
             {

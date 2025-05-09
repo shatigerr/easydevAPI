@@ -22,6 +22,8 @@ public partial class PostgresContext : DbContext
     public virtual DbSet<Bucket> Buckets { get; set; }
 
     public virtual DbSet<Database> Databases { get; set; }
+    public virtual DbSet<TableDB> TableDB { get; set; }
+    public virtual DbSet<ColumnDB> ColumnDB { get; set; }
 
     public virtual DbSet<DecryptedSecret> DecryptedSecrets { get; set; }
 

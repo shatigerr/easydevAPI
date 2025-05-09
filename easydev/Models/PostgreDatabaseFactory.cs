@@ -1,4 +1,6 @@
+using System.Data;
 using easydev.Interfaces;
+using Microsoft.EntityFrameworkCore.Metadata.Internal;
 using Npgsql;
 
 namespace easydev.Models;
@@ -33,7 +35,7 @@ public class PostgreDatabaseFactory : IDatabaseFactory
         return connected;
     }
 
-    public async Task<List<Dictionary<string, object>>> Get(Database db,string query)
+    public async Task<List<Dictionary<string, object>>> Get(Database db, string query)
     {
         NpgsqlConnection connection = new NpgsqlConnection(this.GetConnectionString(db));
         connection.Open();
@@ -79,7 +81,63 @@ public class PostgreDatabaseFactory : IDatabaseFactory
                 throw;
             }
 
-                
+
         }
+    }
+
+    public DataTable GetDBTables(Database db)
+    {
+        DataTable dataTable = new DataTable();
+        using (var conn = new Npgsql.NpgsqlConnection(db.GetConnectionString(db)))
+        {
+            conn.Open();
+
+            string query = @"
+                SELECT table_name 
+                FROM information_schema.tables 
+                WHERE table_schema = 'public' AND table_type = 'BASE TABLE';
+            ";
+
+            using (var cmd = new Npgsql.NpgsqlCommand(query, conn))
+            using (var adapter = new Npgsql.NpgsqlDataAdapter(cmd))
+            {
+                adapter.Fill(dataTable);
+            }
+        }
+
+        return dataTable;
+    }
+
+    public DataTable GetDBColumns(Database db, string table)
+    {
+        DataTable dataTable = new DataTable();
+        using (var conn = new Npgsql.NpgsqlConnection(db.GetConnectionString(db)))
+        {
+            conn.Open();
+
+            string query = @"
+                SELECT 
+                    column_name,
+                    data_type,
+                    character_maximum_length,
+                    is_nullable,
+                    column_default
+                FROM information_schema.columns
+                WHERE table_schema = 'public'
+                AND table_name = @tableName;
+            ";
+
+            using (var cmd = new Npgsql.NpgsqlCommand(query, conn))
+            {
+                cmd.Parameters.AddWithValue("@tableName", table);
+
+                using (var adapter = new Npgsql.NpgsqlDataAdapter(cmd))
+                {
+                    adapter.Fill(dataTable);
+                }
+            }
+        }
+
+        return dataTable;
     }
 }

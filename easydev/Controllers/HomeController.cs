@@ -61,6 +61,28 @@ public class HomeController : ControllerBase
         return Ok(homeDashboard);
     }
 
+    [HttpGet("status/{id}")]
+    public async Task<IActionResult> GetStatusProject(long id)
+    {
+        var apiStatus = true; // Puedes implementar lógica real para verificar
+        var dbStatus = true;  // Ejemplo: verificar conexión a base de datos
+        var appStatus = true; // Por ejemplo, estado general del servidor o health check
+
+        var status = new
+        {
+            apiStatus = apiStatus,
+            dbStatus = dbStatus,
+            appStatus = appStatus
+        };
+
+        return Ok(status);
+    }
+
+    private void GetStatus(long id)
+    {
+        
+    }
+
     private string GetTimeAgo(DateTime dateTime)
     {
         var diff = DateTime.UtcNow - dateTime;
