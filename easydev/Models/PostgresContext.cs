@@ -550,7 +550,7 @@ public partial class PostgresContext : DbContext
                 .HasForeignKey(d => d.IdUser)
                 .HasConstraintName("project_idUser_fkey");
 
-            entity.HasOne(d => d.IddatabaseNavigation).WithMany(p => p.Projects)
+            entity.HasOne(d => d.db).WithMany(p => p.Projects)
                 .HasForeignKey(d => d.Iddatabase)
                 .HasConstraintName("project_IDDatabase_fkey");
         });

@@ -13,4 +13,6 @@ public interface IDatabaseFactory
 
     DataTable GetDBTables(Database db);
     DataTable GetDBColumns(Database db, string table);
+
+    DataTable GetForeignKeys(Database db, string fromTable);
 }

@@ -73,6 +73,7 @@ public class PostgreDatabaseFactory : IDatabaseFactory
             {
                 var affectedRows = command.ExecuteNonQuery();
                 List<int> res = new List<int>();
+                res.Add(affectedRows);
                 return res;
             }
             catch (Exception ex)
@@ -140,4 +141,49 @@ public class PostgreDatabaseFactory : IDatabaseFactory
 
         return dataTable;
     }
+
+    public DataTable GetForeignKeys(Database db, string fromTable)
+    {
+        DataTable dataTable = new DataTable();
+        using (var conn = new NpgsqlConnection(db.GetConnectionString(db)))
+        {
+            conn.Open();
+
+            string query = @"
+            SELECT 
+                tc.constraint_name,
+                tc.table_name AS from_table,
+                ccu.table_name AS to_table,
+                kcu.column_name AS from_column,
+                ccu.column_name AS to_column
+            FROM 
+                information_schema.table_constraints tc
+            JOIN 
+                information_schema.key_column_usage kcu 
+                ON tc.constraint_name = kcu.constraint_name 
+                AND tc.constraint_schema = kcu.constraint_schema
+            JOIN 
+                information_schema.constraint_column_usage ccu 
+                ON ccu.constraint_name = tc.constraint_name 
+                AND ccu.constraint_schema = tc.constraint_schema
+            WHERE 
+                tc.constraint_type = 'FOREIGN KEY'
+                AND tc.table_name = @fromTable;
+        ";
+
+            using (var cmd = new NpgsqlCommand(query, conn))
+            {
+                cmd.Parameters.AddWithValue("@fromTable", fromTable);
+
+                using (var adapter = new NpgsqlDataAdapter(cmd))
+                {
+                    adapter.Fill(dataTable);
+                }
+            }
+        }
+
+        return dataTable;
+    }
+
+
 }

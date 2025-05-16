@@ -92,4 +92,9 @@ public class MySQLDatabaseFactory : IDatabaseFactory
     {
         throw new NotImplementedException();
     }
+
+    public DataTable GetForeignKeys(Database db, string fromTable)
+    {
+        throw new NotImplementedException();
+    }
 }

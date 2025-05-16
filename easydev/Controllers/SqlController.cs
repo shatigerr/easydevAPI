@@ -1,4 +1,5 @@
-﻿using System.Data;
+﻿using System.Collections.Generic;
+using System.Data;
 using easydev.Interfaces;
 using easydev.Models;
 using Microsoft.AspNetCore.Authorization;
@@ -126,6 +127,63 @@ namespace easydev.Controllers
                 return BadRequest(new { importedModels = false, msg = "Error importing models" });
             }
         }
+
+            [HttpPost("query/{id}")]
+            public async Task<IActionResult> ExecQuery(long id, [FromBody] string query)
+            {
+                try
+                {
+                    // Obtener el proyecto
+                    var project = await _context.Projects.FirstOrDefaultAsync(p => p.Id == id);
+                    if (project == null)
+                        return NotFound(new { msg = "Project not found" });
+
+                    // Obtener la base de datos asociada
+                    var database = await _context.Databases.FirstOrDefaultAsync(d => d.Id == project.Iddatabase);
+                    if (database == null)
+                        return NotFound(new { msg = "Database not found" });
+
+                    // Instanciar tu lógica de ejecución si usas una factory
+                    var dbFactory = new DatabaseFactory();
+                    var db = dbFactory.CreateFactory(database);
+
+                    if (!db.CheckDBConnection(database))
+                        return BadRequest(new { msg = "Database connection failed" });
+
+                    // Ejecutar la consulta (ajústalo si devuelves resultados)
+                    List<Dictionary<string, object>> result = new List<Dictionary<string, object>>();
+                    List<int> resultPost = new List<int>();
+                    if (query.ToUpper().StartsWith("SELECT"))
+                    {
+                        result = await db.Get(database, query);
+                        return Ok(new
+                        {
+                            success = true,
+                            result,
+                            msg = "Query executed successfully"
+                        });
+                    }
+                    // Esto debería devolver un DataTable, List<Dictionary<string, object>>, etc.
+                    else
+                    {
+                        resultPost = db.Post(database, query);
+                            return Ok(new
+                        {
+                            success = true,
+                            resultPost,
+                            msg = "Query executed successfully"
+                        });
+                    }
+                    
+                
+                }
+                catch (Exception ex)
+                {
+                    return BadRequest(new { success = false, msg = ex.Message });
+                }
+            }
+
+
 
     }
 }

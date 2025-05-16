@@ -45,37 +45,37 @@ namespace easydev.Controllers
             }
         }
 
-        [HttpPut("{id}")]
-        public async Task<IActionResult> UpdateEndpoint([FromBody] Endpoint updatedEndpoint ,long id)
-        {
-            try
+            [HttpPut("{id}")]
+            public async Task<IActionResult> UpdateEndpoint([FromBody] Endpoint updatedEndpoint ,long id)
             {
-
-                Endpoint endpoint = await _context.Endpoints.Where(e => e.Id == id).FirstAsync();
-
-                if (endpoint == null)
+                try
                 {
-                    return NotFound("Endpoint not found");
+
+                    Endpoint endpoint = await _context.Endpoints.Where(e => e.Id == id).FirstAsync();
+
+                    if (endpoint == null)
+                    {
+                        return NotFound("Endpoint not found");
+                    }
+
+                    // Actualizar las propiedades del endpoint existente con los valores del updatedEndpoint
+                    endpoint.Url = updatedEndpoint.Url;
+                    endpoint.Query = updatedEndpoint.Query;
+                    endpoint.HttpMethod = updatedEndpoint.HttpMethod;
+                    endpoint.IdProject = updatedEndpoint.IdProject;
+                    endpoint.Params = updatedEndpoint.Params;
+                    endpoint.Id = id;
+                    // Copiar otras propiedades necesarias...
+
+                    // Guardar los cambios en la base de datos
+                    await _context.SaveChangesAsync();
+                    return Ok(endpoint);
                 }
-
-                // Actualizar las propiedades del endpoint existente con los valores del updatedEndpoint
-                endpoint.Url = updatedEndpoint.Url;
-                endpoint.Query = updatedEndpoint.Query;
-                endpoint.HttpMethod = updatedEndpoint.HttpMethod;
-                endpoint.IdProject = updatedEndpoint.IdProject;
-                endpoint.Params = updatedEndpoint.Params;
-                endpoint.Id = id;
-                // Copiar otras propiedades necesarias...
-
-                // Guardar los cambios en la base de datos
-                await _context.SaveChangesAsync();
-                return Ok(endpoint);
+                catch (Exception ex)
+                {
+                    return BadRequest(ex.Message);
+                }
             }
-            catch (Exception ex)
-            {
-                return BadRequest(ex.Message);
-            }
-        }
 
         [HttpDelete("{id}")]
         public async Task<IActionResult> DeleteEndpoint(long id)

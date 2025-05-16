@@ -25,7 +25,7 @@ public partial class Project
     [JsonIgnore]
     public virtual User? IdUserNavigation { get; set; }
 
-    public virtual Database? IddatabaseNavigation { get; set; }
+    public virtual Database? db { get; set; }
 
     public virtual ICollection<Log> Logs { get; set; } = new List<Log>();
 }

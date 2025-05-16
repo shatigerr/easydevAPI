@@ -31,17 +31,41 @@ namespace easydev.Controllers
             }
         }
 
+        [HttpPost("auth/{idProject}")]
+        public async Task<IActionResult> AuthorizeProjectAccess(long idProject, [FromBody] long idUser)
+        {
+            int projectsByUser = _context.Projects.Where(x => x.IdUser == idUser && idProject == x.Id).Count();
+            bool auth = projectsByUser == 1;
+            return Ok(new {res=auth});
+        }
+
         [HttpPost]
         public async Task<IActionResult> CreateNewProject([FromBody] Project project)
         {
-            if (project.IdUser != null && project.Iddatabase != null)
+            if (project.IdUser != null)
             {
-                _context.Projects.Add(project);
+                Database db = project.db;
+                db.Dbengine = db.Dbengine.ToUpper();
+                _context.Databases.Add(db);
                 await _context.SaveChangesAsync();
-                return Ok(project);
+
+                project.Iddatabase = db.Id;
+                if (project.Iddatabase != null)
+                {
+                    
+
+                    project.db = db;
+                    _context.Projects.Add(project);
+
+                    await _context.SaveChangesAsync();
+
+                    return Ok(project);
+                }
+                
+                
             }
 
-            return BadRequest("ERROR A PROJECT NEEDS A DATABASE");
+            return BadRequest(new {msg="Error during the creation of the project"});
 
         }
 
@@ -51,9 +75,21 @@ namespace easydev.Controllers
             try
             {
                 Project p = await _context.Projects.Where(p => p.Id == id).FirstAsync();
+                Database db = _context.Databases.Where(x => x.Id == p.Iddatabase).First();
+                List<TableDB> tables = _context.TableDB.Where(x => x.iddatabase == db.Id).ToList();
+                List<ColumnDB> columns = new List<ColumnDB>();
+                foreach (TableDB tb in tables)
+                {
+                    columns.AddRange(_context.ColumnDB.Where(x => x.tableid == tb.id).ToList());
+                }
+                
                 _context.Remove(p);
+                _context.RemoveRange(columns);
+                _context.RemoveRange(tables);
+                _context.Remove(db);
+                
                 await _context.SaveChangesAsync();
-                return Ok();
+                return Ok(new {msg = "Project deleted succesfully"});
             }
             catch (Exception ex) {
                 return BadRequest();
@@ -70,7 +106,7 @@ namespace easydev.Controllers
                 Project project = await _context.Projects
                 .AsNoTracking()
                 .Include(p => p.Endpoints) // Incluir los endpoints relacionados
-                .Include(p => p.IddatabaseNavigation)
+                .Include(p => p.db)
                 .Include(p => p.Logs)
                 .FirstAsync(p => p.Id == id);
                 if (project == null)
@@ -97,9 +133,9 @@ namespace easydev.Controllers
 
                 Project p = await _context.Projects.Where(p => p.Id == id).FirstAsync();
                 
-                if (project == null || p == null)
+                if (project == null ||  p == null)
                 {
-                    return BadRequest();
+                    return BadRequest(new {msg= "Project not found." });
                 }
                 
                 p.Id = id;
@@ -107,13 +143,23 @@ namespace easydev.Controllers
                 p.Description = project.Description;
                 p.Key = project.Key;
                 
+
+                if(project.db != null)
+                {
+                    Database db = await _context.Databases.Where(x => x.Id == p.Iddatabase).FirstAsync();
+                    db.Dbengine = project.db.Dbengine;
+                    db.Host = project.db.Host;
+                    db.Port = project.db.Port;
+                    db.User = project.db.User;
+                    db.Password = project.db.Password;
+                    db.Database1 = project.db.Database1;
+                } 
                 await _context.SaveChangesAsync();
                 return Ok(p);
             }
             catch (Exception ex)
             {
-                Console.WriteLine(ex.ToString());
-                return BadRequest(ex.ToString());
+                return BadRequest(new {msg = "Unable to update the project settings." });
             }
         }
     }
