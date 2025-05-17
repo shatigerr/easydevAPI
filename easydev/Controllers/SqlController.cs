@@ -57,133 +57,199 @@ namespace easydev.Controllers
         {
             try
             {
-                // Obtener el proyecto
-                Project project = await _context.Projects.FirstOrDefaultAsync(p => p.Id == id);
+                // Obtener proyecto y base de datos
+                var project = await _context.Projects.FirstOrDefaultAsync(p => p.Id == id);
                 if (project == null) return NotFound(new { importedModels = false, msg = "Project not found" });
 
-                // Obtener la base de datos asociada al proyecto
-                Database database = await _context.Databases.FirstOrDefaultAsync(d => d.Id == project.Iddatabase);
+                var database = await _context.Databases.FirstOrDefaultAsync(d => d.Id == project.Iddatabase);
                 if (database == null) return NotFound(new { importedModels = false, msg = "Database not found" });
 
-                // Crear el factory para la base de datos
-                DatabaseFactory dbFactory = new DatabaseFactory();
-                IDatabaseFactory db = dbFactory.CreateFactory(database);
-
+                var dbFactory = new DatabaseFactory();
+                var db = dbFactory.CreateFactory(database);
                 if (!db.CheckDBConnection(database))
-                    return BadRequest(new { importedModels = false, msg = "No conection to database" });
+                    return BadRequest(new { importedModels = false, msg = "No connection to database" });
 
-                // Obtener tablas
-                DataTable tables = db.GetDBTables(database);
+                // Obtener todas las tablas de la base de datos externa
+                var tables = db.GetDBTables(database);
+                var existingTables = _context.TableDB.Where(t => t.iddatabase == database.Id).ToList();
 
                 foreach (DataRow tableRow in tables.Rows)
                 {
                     string tableName = tableRow["table_name"].ToString();
 
-                    // Insertar la tabla en TableDB
-                    var tableDB = new TableDB
+                    var tableDB = existingTables.FirstOrDefault(t => t.name == tableName);
+                    if (tableDB == null)
                     {
-                        iddatabase = database.Id,
-                        name = tableName,
-                        description = ""
-                    };
+                        // Nueva tabla
+                        tableDB = new TableDB
+                        {
+                            iddatabase = database.Id,
+                            name = tableName,
+                            description = ""
+                        };
+                        _context.TableDB.Add(tableDB);
+                        await _context.SaveChangesAsync(); // necesitamos el ID para insertar columnas
+                    }
 
-                    _context.TableDB.Add(tableDB);
-                    await _context.SaveChangesAsync();
+                    // Actualizar columnas
+                    var dbColumns = db.GetDBColumns(database, tableName);
+                    var existingColumns = _context.ColumnDB.Where(c => c.tableid == tableDB.id).ToList();
 
-                    // Obtener las columnas de la tabla
-                    DataTable columns = db.GetDBColumns(database, tableName);
+                    var columnsToKeep = new HashSet<string>();
 
-                    foreach (DataRow columnRow in columns.Rows)
+                    foreach (DataRow columnRow in dbColumns.Rows)
                     {
                         string columnName = columnRow["column_name"].ToString();
                         string dataType = columnRow["data_type"].ToString();
-                        object lengthObj = columnRow["character_maximum_length"];
-                        int length = lengthObj != DBNull.Value ? Convert.ToInt32(lengthObj) : 0;
-                        string isNullableStr = columnRow["is_nullable"].ToString();
-                        bool isNullable = isNullableStr == "YES";
-                        string defaultValue = columnRow["column_default"] != DBNull.Value ? columnRow["column_default"].ToString() : null;
+                        int length = columnRow["character_maximum_length"] != DBNull.Value
+                            ? Convert.ToInt32(columnRow["character_maximum_length"])
+                            : 0;
+                        bool isNullable = columnRow["is_nullable"].ToString() == "YES";
+                        string defaultValue = columnRow["column_default"] != DBNull.Value
+                            ? columnRow["column_default"].ToString()
+                            : null;
 
-                        // Insertar columna en ColumnDB
-                        var columnDB = new ColumnDB
+                        columnsToKeep.Add(columnName);
+
+                        var existingColumn = existingColumns.FirstOrDefault(c => c.name == columnName);
+                        if (existingColumn == null)
                         {
-                            tableid = tableDB.id,
-                            name = columnName,
-                            type = dataType,
-                            length = length,
-                            isnullable = isNullable,
-                            isprimarykey = false, // Puedes mejorarlo después para detectar PK
-                        };
-
-                        _context.ColumnDB.Add(columnDB);
+                            var newColumn = new ColumnDB
+                            {
+                                tableid = tableDB.id,
+                                name = columnName,
+                                type = dataType,
+                                length = length,
+                                isnullable = isNullable,
+                                isprimarykey = false
+                            };
+                            _context.ColumnDB.Add(newColumn);
+                        }
+                        else
+                        {
+                            existingColumn.type = dataType;
+                            existingColumn.length = length;
+                            existingColumn.isnullable = isNullable;
+                            existingColumn.isprimarykey = false;
+                        }
                     }
+
+                    // Eliminar columnas que ya no existen
+                    var columnsToRemove = existingColumns
+                        .Where(c => !columnsToKeep.Contains(c.name))
+                        .ToList();
+
+                    _context.ColumnDB.RemoveRange(columnsToRemove);
 
                     await _context.SaveChangesAsync();
                 }
 
-                return Ok(new { importedModels = true, msg = "Models imported succesfully" });
+                return Ok(new { importedModels = true, msg = "Models imported successfully" });
             }
             catch (Exception ex)
             {
-                return BadRequest(new { importedModels = false, msg = "Error importing models" });
+                return BadRequest(new { importedModels = false, msg = "Error importing models", error = ex.Message });
             }
         }
 
-            [HttpPost("query/{id}")]
-            public async Task<IActionResult> ExecQuery(long id, [FromBody] string query)
+
+        [HttpPost("query/{id}")]
+        public async Task<IActionResult> ExecQuery(long id, [FromBody] string query)
+        {
+            try
             {
-                try
+                // Obtener el proyecto
+                var project = await _context.Projects.FirstOrDefaultAsync(p => p.Id == id);
+                if (project == null)
+                    return NotFound(new { msg = "Project not found" });
+
+                // Obtener la base de datos asociada
+                var database = await _context.Databases.FirstOrDefaultAsync(d => d.Id == project.Iddatabase);
+                if (database == null)
+                    return NotFound(new { msg = "Database not found" });
+
+                // Instanciar tu lógica de ejecución si usas una factory
+                var dbFactory = new DatabaseFactory();
+                var db = dbFactory.CreateFactory(database);
+
+                if (!db.CheckDBConnection(database))
+                    return BadRequest(new { msg = "Database connection failed" });
+
+                // Ejecutar la consulta (ajústalo si devuelves resultados)
+                List<Dictionary<string, object>> result = new List<Dictionary<string, object>>();
+                List<int> resultPost = new List<int>();
+                if (query.ToUpper().StartsWith("SELECT"))
                 {
-                    // Obtener el proyecto
-                    var project = await _context.Projects.FirstOrDefaultAsync(p => p.Id == id);
-                    if (project == null)
-                        return NotFound(new { msg = "Project not found" });
-
-                    // Obtener la base de datos asociada
-                    var database = await _context.Databases.FirstOrDefaultAsync(d => d.Id == project.Iddatabase);
-                    if (database == null)
-                        return NotFound(new { msg = "Database not found" });
-
-                    // Instanciar tu lógica de ejecución si usas una factory
-                    var dbFactory = new DatabaseFactory();
-                    var db = dbFactory.CreateFactory(database);
-
-                    if (!db.CheckDBConnection(database))
-                        return BadRequest(new { msg = "Database connection failed" });
-
-                    // Ejecutar la consulta (ajústalo si devuelves resultados)
-                    List<Dictionary<string, object>> result = new List<Dictionary<string, object>>();
-                    List<int> resultPost = new List<int>();
-                    if (query.ToUpper().StartsWith("SELECT"))
+                    result = await db.Get(database, query);
+                    return Ok(new
                     {
-                        result = await db.Get(database, query);
+                        success = true,
+                        result,
+                        msg = "Query executed successfully"
+                    });
+                }
+                // Esto debería devolver un DataTable, List<Dictionary<string, object>>, etc.
+                else
+                {
+                    resultPost = db.Post(database, query);
                         return Ok(new
-                        {
-                            success = true,
-                            result,
-                            msg = "Query executed successfully"
-                        });
-                    }
-                    // Esto debería devolver un DataTable, List<Dictionary<string, object>>, etc.
-                    else
                     {
-                        resultPost = db.Post(database, query);
-                            return Ok(new
-                        {
-                            success = true,
-                            resultPost,
-                            msg = "Query executed successfully"
-                        });
-                    }
-                    
+                        success = true,
+                        resultPost,
+                        msg = "Query executed successfully"
+                    });
+                }
                 
-                }
-                catch (Exception ex)
-                {
-                    return BadRequest(new { success = false, msg = ex.Message });
-                }
+            
             }
+            catch (Exception ex)
+            {
+                return BadRequest(new { success = false, msg = ex.Message });
+            }
+        }
 
+        [HttpGet("tables/{id}")]
+        public async Task<IActionResult> GetTables(long id)
+        {
+            try
+            {
+                // Obtener el proyecto
+                Project project = await _context.Projects.Where(p => p.Id == id).FirstAsync();
 
+                // Obtener las tablas asociadas a la base de datos
+                List<TableDB> tables = _context.TableDB
+                    .Where(x => x.iddatabase == project.Iddatabase)
+                    .ToList();
+                
 
+                return Ok(tables);
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(new { error = ex.Message });
+            }
+        }
+        
+        [HttpGet("columns/{idTable}")]
+        public async Task<IActionResult> GetColumnsByTable(long idTable)
+        {
+            try
+            {
+                // Obtener el proyecto
+                
+
+                // Obtener las tablas asociadas a la base de datos
+                List<ColumnDB> columns = _context.ColumnDB
+                    .Where(x => x.tableid == idTable)
+                    .ToList();
+                
+
+                return Ok(columns);
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(new { error = ex.Message });
+            }
+        }
     }
 }

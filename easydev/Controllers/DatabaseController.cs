@@ -98,7 +98,6 @@ namespace easydev.Controllers
             try
             {
                 
-
                 // Obtener el proyecto y su base de datos
                 Project proj = _context.Projects.First(x => x.Id == projectID);
                 Database database = _context.Databases.First(x => x.Id == proj.Iddatabase);
