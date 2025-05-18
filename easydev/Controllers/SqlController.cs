@@ -108,6 +108,10 @@ namespace easydev.Controllers
                         string defaultValue = columnRow["column_default"] != DBNull.Value
                             ? columnRow["column_default"].ToString()
                             : null;
+                        bool isForeignKey = columnRow["is_foreign_key"].ToString() == "True" ? true : false;
+                        bool isPrimaryKey = columnRow["is_primary_key"].ToString() == "True" ? true : false;
+                        string referencedTable = columnRow["referenced_table"].ToString();
+                        string referencedColumn = columnRow["referenced_column"].ToString();
 
                         columnsToKeep.Add(columnName);
 
@@ -121,7 +125,11 @@ namespace easydev.Controllers
                                 type = dataType,
                                 length = length,
                                 isnullable = isNullable,
-                                isprimarykey = false
+                                isprimarykey = isPrimaryKey,
+                                isforeignkey = isForeignKey,
+                                referencedTable = referencedTable,
+                                referencedColumn = referencedColumn
+                                
                             };
                             _context.ColumnDB.Add(newColumn);
                         }
@@ -249,6 +257,84 @@ namespace easydev.Controllers
             catch (Exception ex)
             {
                 return BadRequest(new { error = ex.Message });
+            }
+        }
+        
+        [HttpPost("saveChanges/{id}")]
+        public async Task<IActionResult> SaveChanges(long id,[FromBody] List<ColumnDB> newColumns)
+        {
+            try
+            {
+                Project project = _context.Projects.Where(x => x.Id == id).First();
+                Database database = _context.Databases.Where(x => x.Id == project.Iddatabase).First();
+                
+                var dbFactory = new DatabaseFactory();
+                var db = dbFactory.CreateFactory(database);
+
+                if (!db.CheckDBConnection(database))
+                    return BadRequest(new { msg = "Database connection failed" });
+                
+                foreach (var newColumn in newColumns)
+                {
+
+                    if (newColumn.id != 0)
+                    {
+                        ColumnDB colum = _context.ColumnDB.Where(x => x.id == newColumn.id).FirstOrDefault();
+                        if (colum != null && newColumn.isUpdated)
+                        {
+                            string tableName = _context.TableDB.Where(x => x.id == colum.tableid).First().name;
+                            List<string> alterQueries = db.GenerateAlterStatements(tableName,colum,newColumn);
+                            
+                            colum.name = newColumn.name;
+                            colum.type = newColumn.type;
+                            colum.length = newColumn.length;
+                            colum.isnullable = newColumn.isnullable;
+                            colum.isprimarykey = newColumn.isprimarykey;
+                            colum.isforeignkey = newColumn.isforeignkey;
+                            colum.referencedTable = newColumn.referencedTable;
+                            colum.referencedColumn = newColumn.referencedColumn;
+                            colum.tableid = newColumn.tableid;
+                            colum.defaultvalue =  newColumn.defaultvalue;
+
+                             
+                            string errorMsg="";
+                            if (!db.ApplyAlterStatements(database, alterQueries, out errorMsg))
+                            {
+                                return BadRequest(new {msg = errorMsg});
+                            }
+                        }else if (colum != null && newColumn.isDelete)
+                        {
+                            _context.ColumnDB.Remove(colum);
+                            string tableName = _context.TableDB.Where(x => x.id == colum.tableid).First().name;
+                            List<string> alterQueries = db.GenerateAlterStatements(tableName,colum,newColumn);
+                            string errorMsg="";
+                            if (!db.ApplyAlterStatements(database, alterQueries, out errorMsg))
+                            {
+                                return BadRequest(new {msg = errorMsg});
+                            }
+                        }
+                        
+                    }else if (newColumn.id == 0 && newColumn.isNew)
+                    {
+                        _context.ColumnDB.Add(newColumn);
+                        string tableName = _context.TableDB.Where(x => x.id == newColumn.tableid).First().name;
+                        List<string> alterQueries = db.GenerateAlterStatements(tableName,newColumn,newColumn);
+                        string errorMsg="";
+                        if (!db.ApplyAlterStatements(database, alterQueries, out errorMsg))
+                        {
+                            return BadRequest(new {msg = errorMsg});
+                        }
+                        
+                    }
+                }
+                _context.SaveChanges();
+                return Ok(new {msg="Changes saved successfully"});
+
+
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(new { success = false, msg = ex.Message });
             }
         }
     }

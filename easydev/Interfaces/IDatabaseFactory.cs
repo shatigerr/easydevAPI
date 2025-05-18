@@ -15,4 +15,6 @@ public interface IDatabaseFactory
     DataTable GetDBColumns(Database db, string table);
 
     DataTable GetForeignKeys(Database db, string fromTable);
+    List<string> GenerateAlterStatements(string tableName, ColumnDB current, ColumnDB updated);
+    bool ApplyAlterStatements(Database db, List<string> alterStatements,out string err);
 }

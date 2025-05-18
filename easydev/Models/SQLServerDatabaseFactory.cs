@@ -98,4 +98,14 @@ public class SQLServerDatabaseFactory : IDatabaseFactory
     {
         throw new NotImplementedException();
     }
+
+    public List<string> GenerateAlterStatements(string tableName, ColumnDB current, ColumnDB updated)
+    {
+        throw new NotImplementedException();
+    }
+
+    public bool ApplyAlterStatements(Database db, List<string> alterStatements,out string err)
+    {
+        throw new NotImplementedException();
+    }
 }
