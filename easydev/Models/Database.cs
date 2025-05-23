@@ -34,7 +34,7 @@ public partial class Database
         }
         else if (db.Dbengine.ToUpper() == "MYSQL")
         {
-            connectionString = $"server={db.Host};uid={db.User};pwd={db.Password};database={db.Database1}";
+            connectionString = $"server={db.Host};port={db.Port};uid={db.User};pwd={db.Password};database={db.Database1}";
         }
 
         return connectionString;

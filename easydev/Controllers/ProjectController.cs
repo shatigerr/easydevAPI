@@ -34,9 +34,10 @@ namespace easydev.Controllers
         [HttpPost("auth/{idProject}")]
         public async Task<IActionResult> AuthorizeProjectAccess(long idProject, [FromBody] long idUser)
         {
-            int projectsByUser = _context.Projects.Where(x => x.IdUser == idUser && idProject == x.Id).Count();
-            bool auth = projectsByUser == 1;
-            return Ok(new {res=auth});
+            Project projectsByUser = _context.Projects.Where(x => x.IdUser == idUser && idProject == x.Id).FirstOrDefault();
+            if (projectsByUser == null) return BadRequest(new { msg = "No project finded" });
+            projectsByUser.db = _context.Databases.Where(x => x.Id == projectsByUser.Iddatabase).First();
+            return Ok(new {res=projectsByUser});
         }
 
         [HttpPost]

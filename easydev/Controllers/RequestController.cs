@@ -102,7 +102,7 @@ namespace easydev.Controllers
                     }
                 }
             
-                return BadRequest();
+                return BadRequest(new { msg="Database not accesible" });
                 
                 
             }

@@ -104,12 +104,12 @@ namespace easydev.Controllers
                         int length = columnRow["character_maximum_length"] != DBNull.Value
                             ? Convert.ToInt32(columnRow["character_maximum_length"])
                             : 0;
-                        bool isNullable = columnRow["is_nullable"].ToString() == "YES";
+                        bool isNullable = columnRow["is_nullable"].ToString().ToUpper() == "YES";
                         string defaultValue = columnRow["column_default"] != DBNull.Value
                             ? columnRow["column_default"].ToString()
                             : null;
-                        bool isForeignKey = columnRow["is_foreign_key"].ToString() == "True" ? true : false;
-                        bool isPrimaryKey = columnRow["is_primary_key"].ToString() == "True" ? true : false;
+                        bool isForeignKey = columnRow["is_foreign_key"].ToString().ToUpper() == "TRUE" ? true : false;
+                        bool isPrimaryKey = columnRow["is_primary_key"].ToString().ToUpper() == "TRUE" ? true : false;
                         string referencedTable = columnRow["referenced_table"].ToString();
                         string referencedColumn = columnRow["referenced_column"].ToString();
 
@@ -283,7 +283,7 @@ namespace easydev.Controllers
                         if (colum != null && newColumn.isUpdated)
                         {
                             string tableName = _context.TableDB.Where(x => x.id == colum.tableid).First().name;
-                            List<string> alterQueries = db.GenerateAlterStatements(tableName,colum,newColumn);
+                            List<string> alterQueries = db.GenerateAlterStatements(tableName,colum,newColumn,database);
                             
                             colum.name = newColumn.name;
                             colum.type = newColumn.type;
@@ -306,7 +306,7 @@ namespace easydev.Controllers
                         {
                             _context.ColumnDB.Remove(colum);
                             string tableName = _context.TableDB.Where(x => x.id == colum.tableid).First().name;
-                            List<string> alterQueries = db.GenerateAlterStatements(tableName,colum,newColumn);
+                            List<string> alterQueries = db.GenerateAlterStatements(tableName,colum,newColumn, database);
                             string errorMsg="";
                             if (!db.ApplyAlterStatements(database, alterQueries, out errorMsg))
                             {
@@ -318,7 +318,7 @@ namespace easydev.Controllers
                     {
                         _context.ColumnDB.Add(newColumn);
                         string tableName = _context.TableDB.Where(x => x.id == newColumn.tableid).First().name;
-                        List<string> alterQueries = db.GenerateAlterStatements(tableName,newColumn,newColumn);
+                        List<string> alterQueries = db.GenerateAlterStatements(tableName,newColumn,newColumn, database);
                         string errorMsg="";
                         if (!db.ApplyAlterStatements(database, alterQueries, out errorMsg))
                         {

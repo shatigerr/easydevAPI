@@ -224,111 +224,83 @@ public class PostgreDatabaseFactory : IDatabaseFactory
         return dataTable;
     }
 
-    public List<string> GenerateAlterStatements(string tableName, ColumnDB current, ColumnDB updated)
+    public List<string> GenerateAlterStatements(string tableName, ColumnDB current, ColumnDB updated, Database db)
     {
         var sqls = new List<string>();
 
-        // Si es una columna nueva
         if (updated.isNew && updated.id == 0)
         {
             var nullable = updated.isnullable ? "" : "NOT NULL";
-            var defaultValue = string.IsNullOrWhiteSpace(updated.defaultvalue) ? "" : $"DEFAULT {updated.defaultvalue}";
+            var defaultValue = string.IsNullOrWhiteSpace(updated.defaultvalue) ? "" : $"DEFAULT '{updated.defaultvalue}'";
 
-            sqls.Add(
-                $"ALTER TABLE \"{tableName}\" ADD COLUMN \"{updated.name}\" {updated.type} {nullable} {defaultValue};".Trim()
-            );
+            sqls.Add($"ALTER TABLE \"{tableName}\" ADD COLUMN \"{updated.name}\" {updated.type} {nullable} {defaultValue};");
 
-            // Si es PK
             if (updated.isprimarykey)
-            {
                 sqls.Add($"ALTER TABLE \"{tableName}\" ADD PRIMARY KEY (\"{updated.name}\");");
-            }
 
-            // Si es FK
             if (updated.isforeignkey && !string.IsNullOrWhiteSpace(updated.referencedTable))
             {
                 string constraintName = $"fk_{tableName}_{updated.name}";
                 sqls.Add($"ALTER TABLE \"{tableName}\" ADD CONSTRAINT \"{constraintName}\" FOREIGN KEY (\"{updated.name}\") REFERENCES \"{updated.referencedTable}\"(\"{updated.referencedColumn}\");");
             }
 
-            return sqls; // Nada más que hacer
+            return sqls;
         }
 
-        // Si es una columna a eliminar
         if (updated.isDelete)
         {
+            if (current.isforeignkey)
+            {
+                string? constraintName = GetForeignKeyConstraintName(db, tableName, current.name);
+                if (!string.IsNullOrEmpty(constraintName))
+                    sqls.Add($"ALTER TABLE \"{tableName}\" DROP CONSTRAINT \"{constraintName}\";");
+            }
+
             sqls.Add($"ALTER TABLE \"{tableName}\" DROP COLUMN \"{current.name}\";");
-            return sqls; // No continuamos con otros cambios
+            return sqls;
         }
 
-        // 1. Eliminar FK si existía antes y va a cambiar
-        bool willChangeFK =
-            current.isforeignkey ||
-            updated.isforeignkey ||
+        if (current.isforeignkey && (
             current.referencedTable != updated.referencedTable ||
-            current.referencedColumn != updated.referencedColumn;
-
-        if (willChangeFK && current.isforeignkey && !string.IsNullOrWhiteSpace(current.referencedTable))
+            current.referencedColumn != updated.referencedColumn ||
+            !updated.isforeignkey))
         {
-            string constraintName = $"fk_{tableName}_{current.name}";
-            sqls.Add($"ALTER TABLE \"{tableName}\" DROP CONSTRAINT IF EXISTS \"{constraintName}\";");
+            string? constraintName = GetForeignKeyConstraintName(db, tableName, current.name);
+            if (!string.IsNullOrEmpty(constraintName))
+                sqls.Add($"ALTER TABLE \"{tableName}\" DROP CONSTRAINT \"{constraintName}\";");
         }
 
-        // 2. Renombrar columna
         if (current.name != updated.name)
-        {
             sqls.Add($"ALTER TABLE \"{tableName}\" RENAME COLUMN \"{current.name}\" TO \"{updated.name}\";");
-        }
 
-        // 3. Cambiar tipo
-        if (current.type != updated.type)
+        if (current.type != updated.type || current.isnullable != updated.isnullable)
         {
+            var nullable = updated.isnullable ? "" : "NOT NULL";
             sqls.Add($"ALTER TABLE \"{tableName}\" ALTER COLUMN \"{updated.name}\" TYPE {updated.type};");
+            sqls.Add($"ALTER TABLE \"{tableName}\" ALTER COLUMN \"{updated.name}\" SET {nullable};");
         }
 
-        // 4. Cambiar nullabilidad
-        if (current.isnullable != updated.isnullable)
-        {
-            if (updated.isnullable)
-                sqls.Add($"ALTER TABLE \"{tableName}\" ALTER COLUMN \"{updated.name}\" DROP NOT NULL;");
-            else
-                sqls.Add($"ALTER TABLE \"{tableName}\" ALTER COLUMN \"{updated.name}\" SET NOT NULL;");
-        }
-
-        // 5. Cambiar default
         if (current.defaultvalue != updated.defaultvalue)
         {
-            if (string.IsNullOrWhiteSpace(updated.defaultvalue))
-                sqls.Add($"ALTER TABLE \"{tableName}\" ALTER COLUMN \"{updated.name}\" DROP DEFAULT;");
-            else
-                sqls.Add($"ALTER TABLE \"{tableName}\" ALTER COLUMN \"{updated.name}\" SET DEFAULT {updated.defaultvalue};");
+            sqls.Add($"ALTER TABLE \"{tableName}\" ALTER COLUMN \"{updated.name}\" DROP DEFAULT;");
+            if (!string.IsNullOrWhiteSpace(updated.defaultvalue))
+                sqls.Add($"ALTER TABLE \"{tableName}\" ALTER COLUMN \"{updated.name}\" SET DEFAULT '{updated.defaultvalue}';");
         }
 
-        // 6. Clave primaria
-        if (current.isprimarykey != updated.isprimarykey)
-        {
-            if (updated.isprimarykey)
-            {
-                sqls.Add($"ALTER TABLE \"{tableName}\" ADD PRIMARY KEY (\"{updated.name}\");");
-            }
-            else
-            {
-                sqls.Add($"-- Manual action may be required to DROP PRIMARY KEY on column \"{updated.name}\"");
-            }
-        }
+        if (!current.isprimarykey && updated.isprimarykey)
+            sqls.Add($"ALTER TABLE \"{tableName}\" ADD PRIMARY KEY (\"{updated.name}\");");
 
-        // 7. Añadir FK de nuevo si es necesario
         if (updated.isforeignkey && !string.IsNullOrWhiteSpace(updated.referencedTable))
         {
-            string newConstraint = $"fk_{tableName}_{updated.name}";
-            sqls.Add($"ALTER TABLE \"{tableName}\" ADD CONSTRAINT \"{newConstraint}\" FOREIGN KEY (\"{updated.name}\") REFERENCES \"{updated.referencedTable}\"(\"{updated.referencedColumn}\");");
+            string constraintName = $"fk_{tableName}_{updated.name}";
+            sqls.Add($"ALTER TABLE \"{tableName}\" ADD CONSTRAINT \"{constraintName}\" FOREIGN KEY (\"{updated.name}\") REFERENCES \"{updated.referencedTable}\"(\"{updated.referencedColumn}\");");
         }
-
 
         return sqls;
     }
 
-    
+
+
     public bool ApplyAlterStatements(Database db, List<string> alterStatements,out string err)
     {
         err = "";
@@ -363,5 +335,32 @@ public class PostgreDatabaseFactory : IDatabaseFactory
         }
     }
 
+    public string GetForeignKeyConstraintName(Database db, string tableName, string columnName)
+    {
+        using (var conn = new Npgsql.NpgsqlConnection(db.GetConnectionString(db)))
+        {
+            conn.Open();
+
+            string query = @"
+        SELECT tc.constraint_name
+        FROM information_schema.table_constraints tc
+        JOIN information_schema.key_column_usage kcu 
+            ON tc.constraint_name = kcu.constraint_name
+            AND tc.constraint_schema = kcu.constraint_schema
+        WHERE tc.constraint_type = 'FOREIGN KEY'
+          AND kcu.table_name = @tableName
+          AND kcu.column_name = @columnName
+        LIMIT 1;";
+
+            using (var cmd = new Npgsql.NpgsqlCommand(query, conn))
+            {
+                cmd.Parameters.AddWithValue("@tableName", tableName);
+                cmd.Parameters.AddWithValue("@columnName", columnName);
+
+                var result = cmd.ExecuteScalar();
+                return result?.ToString();
+            }
+        }
+    }
 
 }
