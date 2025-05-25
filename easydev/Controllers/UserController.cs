@@ -7,6 +7,7 @@ using System.Net.Mail;
 using System.Net;
 using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.AspNetCore.Authorization;
+using Org.BouncyCastle.Crypto.Generators;
 
 namespace easydev.Controllers
 {
@@ -40,7 +41,7 @@ namespace easydev.Controllers
             }
             else
             {
-                if(loginRequest.Password.Equals(user.Password))
+                if (BCrypt.Net.BCrypt.Verify(loginRequest.Password, user.Password))
                 {
                     if(user.Activated == 1)
                     {
@@ -70,6 +71,13 @@ namespace easydev.Controllers
             {
                 return BadRequest(new { msg = "You haven't entered any email.", type = "error" }); 
             }
+
+            user.Password = BCrypt.Net.BCrypt.HashPassword(user.Password);
+
+            string url = $"https://easydev.innobyte.dev/account?mail={user.Mail}";
+            #if DEBUG
+                url = $"http://localhost:5173/account?mail={user.Mail}";
+            #endif
             string recipientEmail = user.Mail;
             string subject = "Verify Your Account";
             string body = @$"
@@ -85,7 +93,7 @@ namespace easydev.Controllers
                     </p>
 
                     <div style='text-align: center; margin-bottom: 40px;'>
-                        <a href='http://localhost:4200/account?mail={user.Mail}'
+                        <a href='{url}'
                             style='display: inline-block; padding: 12px 28px; background-color: #111827; color: #ffffff; font-size: 16px; text-decoration: none; border-radius: 6px;'>
                             Activate Account
                         </a>
